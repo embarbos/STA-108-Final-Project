@@ -1,0 +1,346 @@
+---
+title: 'STA 108 Final Project: An analysis of crime prevalence using 5 socioeconomic
+  variables for 4 geographic regions of the United States.'
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=6, fig.height=4)
+```
+
+## Import and format data:
+```{r}
+library(MASS)
+data_demo <- read.table("Demographic.txt")
+names(data_demo) = c('id','county','state','land_area','total_population','percent_population_18to34','percent_population_65orOlder','No_physicians',    'No_hospital_beds','crime','highschool','bachelor','below_poverty','unemployment','per_cap_income','total_income','geo_region')
+```
+
+
+## Question 1:
+
+## Generate Regression Models for each geographic region:
+```{r}
+model_demo <- lm(crime ~ per_cap_income + unemployment + below_poverty + bachelor + highschool, data=data_demo)
+```
+```{r}
+regional_model_generator = function(data_demo,region){
+  loader <- data_demo[data_demo$geo_region == region,]
+  y <- as.numeric(loader$crime)
+  x1 <- as.numeric(loader$per_cap_income)
+  x2 <- as.numeric(loader$unemployment)
+  x3 <- as.numeric(loader$below_poverty)
+  x4 <- as.numeric(loader$bachelor)
+  x5 <- as.numeric(loader$highschool)
+  output = lm(y ~ x1+x2+x3+x4+x5, data=data_demo)
+  return(output)
+}
+
+loader1 = regional_model_generator(data_demo= data_demo,region =1)
+loader2 = regional_model_generator(data_demo= data_demo,region =2)
+loader3 = regional_model_generator(data_demo= data_demo,region =3)
+loader4 = regional_model_generator(data_demo= data_demo,region =4)
+```
+
+```{r}
+loader1_data = subset(data_demo, geo_region ==1)
+loader2_data = subset(data_demo, geo_region ==2)
+loader3_data = subset(data_demo, geo_region ==3)
+loader4_data = subset(data_demo, geo_region ==4)
+```
+
+## Exploratory Data Analysis:
+
+The initial regression model for the demographic dataset has the coefficients Y = -28798.161 + 4.729 - 815.696 + 3982.371 + 254.546 - 858.541. These negative and positive values for each coefficient responds to the real world relationship between these variables, with the 4.729 coefficient for per capita income indicating a positive relationship between serious crimes and amount of per capita income. Likewise, the negative coefficients for unemployment and prevalence of high school degrees indicate a negative relationship between serious crimes and these factors. A negative relationship in this situation indicates that a increase in the unemployment rate and decrease in the prevalence of high school degrees would lead to an increase in serious crimes. 
+
+The residual plots for each region all display fairly similar results, with the median centered around 0 and all are quite right skewed due to a few extreme outliers. 
+
+```{r}
+summary(loader1)
+```
+```{r}
+summary(loader2)
+```
+```{r}
+summary(loader3)
+```
+```{r}
+summary(loader4)
+```
+
+```{r}
+boxplot(loader1$residuals, horizontal = T, main = "Residuals for Reigon 1")
+boxplot(loader2$residuals, horizontal = T, main = "Residuals for Reigon 2")
+boxplot(loader3$residuals, horizontal = T, main = "Residuals for Reigon 3")
+boxplot(loader4$residuals, horizontal = T, main = "Residuals for Reigon 4")
+```
+
+
+
+
+## Question 2:
+
+## Functions to re-initialize variables and construct AIC and BIC models:
+```{r}
+AICfunction <- function(data_demo, region){
+  loader <- data_demo[data_demo$geo_region == region,]
+  library(MASS)
+  y <- as.numeric(loader$crime)
+  x1 <- as.numeric(loader$per_cap_income)
+  x2 <- as.numeric(loader$unemployment)
+  x3 <- as.numeric(loader$below_poverty)
+  x4 <- as.numeric(loader$bachelor)
+  x5 <- as.numeric(loader$highschool)
+  loader_mod <- lm(y~x1+x2+x3+x4+x5, data = loader)
+  AIC_loader <- stepAIC(loader_mod, k =2)
+  return(AIC_loader)
+}
+```
+
+```{r}
+BICfunction <- function(data_demo, region){
+  loader <- data_demo[data_demo$geo_region == region,]
+  library(MASS)
+  y <- as.numeric(loader$crime)
+  x1 <- as.numeric(loader$per_cap_income)
+  x2 <- as.numeric(loader$unemployment)
+  x3 <- as.numeric(loader$below_poverty)
+  x4 <- as.numeric(loader$bachelor)
+  x5 <- as.numeric(loader$highschool)
+  loader_mod <- lm(y~x1+x2+x3+x4+x5, data = loader)
+  BIC_loader <- stepAIC(loader_mod, k =log(nrow(loader)))
+  return(BIC_loader)
+}
+```
+
+
+## Construct AIC and BIC for each model per geographic region:
+```{r}
+AIC_loader1 = AICfunction(data_demo, 1)
+AIC_loader1$coefficients
+```
+```{r}
+AIC_loader2 = AICfunction(data_demo, 2)
+AIC_loader2$coefficients
+```
+```{r}
+AIC_loader3 = AICfunction(data_demo, 3)
+AIC_loader3$coefficients
+```
+```{r}
+AIC_loader4 = AICfunction(data_demo, 4)
+AIC_loader4$coefficients
+```
+
+```{r}
+BIC_loader1 = BICfunction(data_demo, 1)
+BIC_loader1$coefficients
+```
+```{r}
+BIC_loader2 = BICfunction(data_demo, 2)
+BIC_loader2$coefficients
+```
+```{r}
+BIC_loader3 = BICfunction(data_demo, 3)
+BIC_loader3$coefficients
+```
+```{r}
+BIC_loader4 = BICfunction(data_demo, 4)
+BIC_loader4$coefficients
+```
+
+
+## Question 3:
+
+## Estimate a 90% confidence interval for parameters Bj, j=1,...,p
+
+90% Confidence Intervals for each region listed below:
+
+```{r}
+confint(AIC_loader1, level = 0.9)
+```
+x1          -2.425978e-01 7.494175e+00
+x3           8.445211e+03 1.715264e+04
+x4           3.059355e+02 6.432111e+03
+x5          -6.082087e+03 8.646288e+01
+
+```{r}
+confint(AIC_loader2, level = 0.9)
+```
+x1           6.132835e+00      11.73224
+x3           5.385754e+03    9984.27016
+
+```{r}
+confint(AIC_loader3, level = 0.9)
+```
+x1           2.325627e+00      5.503114
+x3           1.125616e+03   3288.192401
+
+```{r}
+confint(AIC_loader4, level = 0.9)
+```
+x2          -17151.0469  -1024.712
+x4             774.6599   6921.321
+x5          -11179.7778  -2940.668
+
+```{r}
+confint(BIC_loader1, level = 0.9)
+```
+x3            7131.412  15137.883
+x4            3379.490   7571.454
+x5           -6959.379  -1197.701
+
+```{r}
+confint(BIC_loader2, level = 0.9)
+```
+x1           6.132835e+00      11.73224
+x3           5.385754e+03    9984.27016
+
+```{r}
+confint(BIC_loader3, level = 0.9)
+```
+x1           2.325627e+00      5.503114
+x3           1.125616e+03   3288.192401
+
+```{r}
+confint(BIC_loader4, level = 0.9)
+```
+x4            810.656   7058.3043
+x5          -6563.551   -808.7508
+
+
+## Using alpha = 0.01, compute the p-value for the two alterntives in the formula:
+
+The P-Value computations and comparisons are listed below:
+
+```{r}
+summary(AIC_loader1)
+```
+x1 P-Value: 0.1228 > 0.01
+x3 P-Value: 4.09e-0 < 0.01
+x4 P-Value: 0.0708 > 0.01
+x5 P-Value: 0.1097 > 0.01
+
+From this test, We can conclude that we can reject H0 for x1, x4, and x5, but fail to reject H0 for x3
+
+```{r}
+summary(AIC_loader2)
+```
+x1 P-Value: 6.59e-07 < 0.01
+x3 P-Value: 2.19e-07 < 0.01
+
+From this test we can conclude that we fail to reject H0 for both x1 and x3
+
+```{r}
+summary(AIC_loader3)
+```
+x1 P-Value: 7.37e-05 < 0.01
+x3 P-Value: 0.000931 < 0.01
+
+From this test, we conclude that we fail to reject H0 for either x1 or x3
+
+```{r}
+summary(AIC_loader4)
+```
+x2 P-Value: 0.06441 > 0.01
+x4 P-Value: 0.04048 > 0.01
+x5 P-Value: 0.00560 < 0.01
+
+From this test we can conclude that we reject H0 for x2 and x4, but fail to reject H0 for x5
+
+```{r}
+summary(BIC_loader1)
+```
+x3 P-Value: 1.17e-05 < 0.01
+x4 P-Value: 3.47e-05 < 0.01
+x5 P-Value: 0.0207 > 0.01
+
+From this test we conclude that we reject H0 for x3 and x4, but fail to reject H0 for x5
+
+```{r}
+summary(BIC_loader2)
+```
+x1 P-Value: 6.59e-07 < 0.01
+x3 P-Value: 2.19e-07 < 0.01
+
+From this test we conclude that we fail to reject H0 for either parameter
+
+```{r}
+summary(BIC_loader3)
+```
+x1 P-Value: 7.37e-05 < 0.01
+x3 P-Value: 0.000931 < 0.01
+
+From this test we conclude that we fail to reject H0 for either parameter
+
+```{r}
+summary(BIC_loader4)
+```
+x4 P-Value: 0.0393 > 0.01
+x5 P-Value: 0.0362 > 0.01
+
+From this test we conclude that we reject H0 for both x4 and x4
+
+## Test whether or not B1 = B2 = ... = Bp-1 = 0 with a = 0.05. State the decision rule and conclusion. Are these measures similar for the four regions?
+
+H0: B1 = B2 = ... = Bp-1 = 0
+Ha: B1 != B2 != ... = Bp-1 != 0
+
+We fail to reject H0 with the majority of the tests, with the exceptions of x1, x4, x5 of Region 1, and x2 of Region 4. For these parameters, we fail to reject H0 and conclude that these parameters are not the same and do not equal 0.
+
+```{r}
+summary(AIC_loader1)
+```
+```{r}
+summary(AIC_loader2)
+```
+```{r}
+summary(AIC_loader3)
+```
+```{r}
+summary(AIC_loader4)
+```
+```{r}
+summary(BIC_loader1)
+```
+```{r}
+summary(BIC_loader2)
+```
+```{r}
+summary(BIC_loader3)
+```
+```{r}
+summary(BIC_loader4)
+```
+
+
+## Obtain the residuals for each fitted model and prepare the diagnostic plots for each fitted model. State the conclusions.
+
+Despite being categorized differently because of the AIC vs BIC method, the residual plots for the 4 geographic regions remain the same between AIC and BIC models. In terms of the plots compared between regions, Region 1 and Region 2 have very similar residual plots, with the only noticeable difference being that Region 2 has less extreme outliers in the Cook's Distance plot when compared to Region 1's plot. Region 4 also closely follows the trends of Region's 1 and 2. The most deviation comes from region 3, who's residuals deviate from the trends in a much more extreme fashion. 
+
+```{r}
+plot(AIC_loader1)
+```
+```{r}
+plot(AIC_loader2)
+```
+```{r}
+plot(AIC_loader3)
+```
+```{r}
+plot(AIC_loader4)
+```
+```{r}
+plot(BIC_loader1)
+```
+```{r}
+plot(BIC_loader2)
+```
+```{r}
+plot(BIC_loader3)
+```
+```{r}
+plot(BIC_loader4)
+```
